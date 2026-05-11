@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "required": ["job_id", "intent", "routing", "constraints"],
+  "properties": {
+    "job_id": { "type": "string" },
+    "intent": {
+      "type": "object",
+      "required": ["natural_language", "normalized_type"],
+      "properties": {
+        "natural_language": { "type": "string" },
+        "normalized_type": {
+          "type": "string",
+          "enum": ["summarization", "classification", "routing_decision", "generation"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "routing": {
+      "type": "object",
+      "required": ["target_model", "confidence", "explanation"],
+      "properties": {
+        "target_model": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "explanation": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "constraints": {
+      "type": "object",
+      "required": ["max_latency_ms", "max_cost_usd", "must_be_deterministic"],
+      "properties": {
+        "max_latency_ms": { "type": "integer", "minimum": 1 },
+        "max_cost_usd": { "type": "number", "minimum": 0 },
+        "must_be_deterministic": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

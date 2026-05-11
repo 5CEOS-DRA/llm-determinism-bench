@@ -1,0 +1,1 @@
+Define a routing job that determines whether a small or large model should classify a short customer message. Latency must be minimal, cost must be low, and the job must run deterministically.

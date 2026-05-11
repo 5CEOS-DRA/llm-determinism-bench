@@ -1,0 +1,1 @@
+Define a routing job that selects between a small or large model for extracting key fields from a brief system-health note. This is a classification-shaped extraction task. The job must be deterministic and optimized for low cost and tight latency.

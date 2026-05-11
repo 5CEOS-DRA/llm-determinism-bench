@@ -1,0 +1,1 @@
+Define a routing job for deciding whether a small or large model should summarize a two-page incident report. The job must be deterministic, with strict latency and low cost constraints.

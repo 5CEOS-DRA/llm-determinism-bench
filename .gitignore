@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.DS_Store
+
+# Run output — ephemeral, can be regenerated. Don't pollute the repo.
+results/
+
+# Local secrets (none used today, but safety rail)
+.env
+.env.local

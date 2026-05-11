@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "required": ["title", "priority", "tags"],
+  "properties": {
+    "title": { "type": "string" },
+    "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    }
+  },
+  "additionalProperties": false
+}

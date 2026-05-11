@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "required": ["user", "task", "deadline"],
+  "properties": {
+    "user": {
+      "type": "object",
+      "required": ["id", "role"],
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string", "enum": ["operator", "analyst", "viewer"] }
+      },
+      "additionalProperties": false
+    },
+    "task": {
+      "type": "object",
+      "required": ["summary", "steps"],
+      "properties": {
+        "summary": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["description", "done"],
+            "properties": {
+              "description": { "type": "string" },
+              "done": { "type": "boolean" }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "deadline": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
