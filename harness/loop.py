@@ -80,6 +80,17 @@ def discover_systems() -> List[Tuple[str, Callable, str, Optional[str]]]:
         from runners.cloud_a import run_cloud_a_once
         systems.append(("cloud-a-flagship", run_cloud_a_once, "gpt-4o-2024-08-06", "CLOUD_A_API_KEY"))
 
+    # CogOS LIVE gateway — gated on COGOS_LIVE_API_KEY. This is the
+    # "audit, not trust" closer: hitting the same production endpoint
+    # any customer reaches, with a customer-equivalent bearer.
+    if os.environ.get("COGOS_LIVE_API_KEY"):
+        from runners.cogos_live import run_cogos_live_once
+        systems.append(("cogos-live-tier-b", run_cogos_live_once, "cogos-tier-b", "COGOS_LIVE_API_KEY"))
+        # tier-a only included when allowed by the package; the runner
+        # will surface 403 model_tier_denied as a parse failure if not.
+        if os.environ.get("COGOS_LIVE_TIER_A") == "1":
+            systems.append(("cogos-live-tier-a", run_cogos_live_once, "cogos-tier-a", "COGOS_LIVE_API_KEY"))
+
     # Optional restriction via BENCH_SYSTEMS=cogos-qwen2.5-3b,...
     bench_systems_env = os.environ.get("BENCH_SYSTEMS")
     if bench_systems_env:

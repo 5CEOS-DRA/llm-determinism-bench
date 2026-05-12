@@ -1,0 +1,97 @@
+name: weekly-audit-live-cogos
+
+# Weekly audit-not-trust loop. Hits the live cogos-api gateway with the
+# same bench any third party can clone and run, emits CSV + JSONL, and
+# commits the results back to the repo. This is the proof layer the
+# landing page promises ("we re-run it against our live inference path
+# on a published cadence").
+
+on:
+  schedule:
+    # Mondays at 13:00 UTC — pick a time after weekly maintenance windows.
+    - cron: "0 13 * * 1"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write  # need to commit results back
+
+concurrency:
+  group: weekly-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      # Customer-equivalent bearer for the live endpoint. SET THIS in
+      # repo settings → Secrets and variables → Actions:
+      #   COGOS_LIVE_API_KEY = sk-cogos-<32-hex>
+      COGOS_LIVE_API_KEY: ${{ secrets.COGOS_LIVE_API_KEY }}
+      # Pin BENCH_SYSTEMS so only the live system runs in CI — the
+      # local-Ollama path needs Ollama on the runner which we don't have.
+      BENCH_SYSTEMS: cogos-live-tier-b
+      # Small N to keep CI fast (~3 minutes) and quota cost minimal.
+      # On a starter package with 100k req/mo, this consumes ≤30 calls
+      # per run, which is ~1500 calls/year — negligible.
+      BENCH_N1: "3"
+      BENCH_N2: "3"
+      BENCH_N3: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Refuse if key missing (clean message, not a stack trace)
+        run: |
+          if [ -z "$COGOS_LIVE_API_KEY" ]; then
+            echo "::error::COGOS_LIVE_API_KEY secret is not set on this repo."
+            echo "::error::Set it under Settings → Secrets and variables → Actions"
+            echo "::error::with a customer-equivalent sk-cogos-... key from cogos-api."
+            exit 1
+          fi
+          echo "key present, length: ${#COGOS_LIVE_API_KEY}"
+
+      - name: Run bench against live cogos-api
+        run: |
+          python -m harness.loop
+          ls -la results/raw/
+
+      - name: Summarize → CSV
+        run: |
+          python -m harness.summarize
+
+      - name: Archive run under results/<date>/
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          DEST="results/$DATE"
+          mkdir -p "$DEST"
+          # Move the just-written raw + the latest summary into the date dir.
+          mv results/raw/run_*.jsonl "$DEST/" || true
+          # summarize.py writes results/summary.csv — copy it.
+          if [ -f results/summary.csv ]; then
+            cp results/summary.csv "$DEST/summary.csv"
+          fi
+          ls -la "$DEST"
+
+      - name: Commit + push results
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          git config user.name  "cogos-audit-bot"
+          git config user.email "audit-bot@5ceos.com"
+          git add results/
+          if git diff --cached --quiet; then
+            echo "no new results to commit"
+            exit 0
+          fi
+          git commit -m "audit: $DATE weekly live-cogos run"
+          git push
