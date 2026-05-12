@@ -1,15 +1,21 @@
 """
-OpenAI runner for the endpoint side of the benchmark.
+Cloud Provider A runner.
 
-- Model: gpt-4o-2024-08-06 (pinned per SPEC §3).
-- Endpoint: https://api.openai.com/v1/chat/completions
+Connects to a hosted chat-completions endpoint at a third-party provider's
+API. The provider's identity is intentionally not surfaced in this file's
+public-facing strings — the bench measures behavior, not brands. The API
+URL constant below documents what this runner actually hits so anyone
+running the bench can verify what's being measured.
+
+- Endpoint: see API_URL constant below (factual technical reference)
+- Auth: bearer token in CLOUD_A_API_KEY env var
 - Modes:
   - "default" — prompt-only, no response_format.
   - "best"    — response_format: json_schema with strict=true.
 
 Single-call runner. Mirrors `runners.ollama.run_ollama_once`.
 
-Captures OpenAI-specific fields:
+Captures provider-specific fields:
 - system_fingerprint (SPEC §6.1: flag mid-run model snapshot shifts)
 - prompt_tokens / completion_tokens (for actual per-call cost rollup)
 """
@@ -34,7 +40,7 @@ API_URL = "https://api.openai.com/v1/chat/completions"
 
 
 @dataclass(frozen=True)
-class OpenAIRunResult:
+class CloudARunResult:
     system: str
     mode: Mode
     parser_mode: ParserMode
@@ -94,7 +100,7 @@ def _payload_best(
     }
 
 
-def _call_openai(
+def _call_cloud(
     payload: Dict[str, Any], api_key: str, timeout: float = 60.0
 ) -> Dict[str, Any]:
     resp = requests.post(
@@ -110,7 +116,7 @@ def _call_openai(
     return resp.json()
 
 
-def run_openai_once(
+def run_cloud_a_once(
     *,
     mode: Mode,
     parser_mode: ParserMode,
@@ -121,11 +127,11 @@ def run_openai_once(
     scenario_id: str,
     schema_id: str,
     seed: int = 0,
-) -> OpenAIRunResult:
-    api_key = os.environ.get("OPENAI_API_KEY")
+) -> CloudARunResult:
+    api_key = os.environ.get("CLOUD_A_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "OPENAI_API_KEY not set. Export it before running the OpenAI runner."
+            "CLOUD_A_API_KEY not set. Export it before running the Cloud Provider A runner."
         )
 
     if mode == "default":
@@ -138,15 +144,15 @@ def run_openai_once(
         raise ValueError(f"Unknown mode: {mode}")
 
     t0 = time.perf_counter()
-    data = _call_openai(payload, api_key)
+    data = _call_cloud(payload, api_key)
     latency = time.perf_counter() - t0
 
     choices = data.get("choices") or []
     if not choices:
-        raise RuntimeError(f"OpenAI response had no choices: {data!r}")
+        raise RuntimeError(f"Cloud A response had no choices: {data!r}")
     raw = choices[0].get("message", {}).get("content")
     if not isinstance(raw, str):
-        raise RuntimeError(f"Unexpected OpenAI response shape: {data!r}")
+        raise RuntimeError(f"Unexpected Cloud A response shape: {data!r}")
 
     system_fingerprint = data.get("system_fingerprint")
     usage = data.get("usage") or {}
@@ -167,8 +173,8 @@ def run_openai_once(
         schema_result = None
         schema_ok = False
 
-    return OpenAIRunResult(
-        system=f"endpoint-openai-{model}",
+    return CloudARunResult(
+        system=f"cloud-a-{model}",
         mode=mode,
         parser_mode=parser_mode,
         model=model,

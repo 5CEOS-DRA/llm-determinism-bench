@@ -6,8 +6,8 @@ Iterates (system × mode × scenario × n) and emits BenchRecord JSONL.
 Per SPEC v0.3:
 - Active systems auto-detected by env-key presence:
     cogOS always active (Ollama local)
-    Groq active if GROQ_API_KEY set
-    OpenAI active if OPENAI_API_KEY set
+    Cloud Provider B active if CLOUD_B_API_KEY set
+    Cloud Provider A active if CLOUD_A_API_KEY set
 - Default mode → 2 records per HTTP call (strict + permissive parsing).
 - Best mode → 1 record per HTTP call (strict only; constrained decoding).
 - Per-call exceptions are caught and recorded as failed-parse records so a
@@ -69,16 +69,16 @@ def discover_systems() -> List[Tuple[str, Callable, str, Optional[str]]]:
     systems.append(("cogos-qwen2.5-3b", run_ollama_once, "qwen2.5:3b-instruct", None))
     systems.append(("cogos-qwen2.5-7b", run_ollama_once, "qwen2.5:7b-instruct", None))
 
-    # Groq — primary cloud, gated on GROQ_API_KEY
-    if os.environ.get("GROQ_API_KEY"):
-        from runners.groq import run_groq_once
-        systems.append(("groq-llama-3.1-8b", run_groq_once, "llama-3.1-8b-instant", "GROQ_API_KEY"))
-        systems.append(("groq-llama-3.3-70b", run_groq_once, "llama-3.3-70b-versatile", "GROQ_API_KEY"))
+    # Cloud Provider B — gated on CLOUD_B_API_KEY
+    if os.environ.get("CLOUD_B_API_KEY"):
+        from runners.cloud_b import run_cloud_b_once
+        systems.append(("cloud-b-small", run_cloud_b_once, "llama-3.1-8b-instant", "CLOUD_B_API_KEY"))
+        systems.append(("cloud-b-large", run_cloud_b_once, "llama-3.3-70b-versatile", "CLOUD_B_API_KEY"))
 
-    # OpenAI — secondary cloud, gated on OPENAI_API_KEY
-    if os.environ.get("OPENAI_API_KEY"):
-        from runners.openai import run_openai_once
-        systems.append(("openai-gpt-4o", run_openai_once, "gpt-4o-2024-08-06", "OPENAI_API_KEY"))
+    # Cloud Provider A — gated on CLOUD_A_API_KEY
+    if os.environ.get("CLOUD_A_API_KEY"):
+        from runners.cloud_a import run_cloud_a_once
+        systems.append(("cloud-a-flagship", run_cloud_a_once, "gpt-4o-2024-08-06", "CLOUD_A_API_KEY"))
 
     # Optional restriction via BENCH_SYSTEMS=cogos-qwen2.5-3b,...
     bench_systems_env = os.environ.get("BENCH_SYSTEMS")

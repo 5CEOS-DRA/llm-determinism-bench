@@ -77,7 +77,7 @@ def _schema_result_to_lists(sr: Optional[SchemaResult]) -> Dict[str, List[str]]:
 
 def from_runner_result(
     *,
-    result: Any,        # OllamaRunResult | OpenAIRunResult | GroqRunResult
+    result: Any,        # OllamaRunResult | CloudARunResult | CloudBRunResult
     parser_mode: str,
     run_index: int,
     seed: int,

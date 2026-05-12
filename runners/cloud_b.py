@@ -1,17 +1,22 @@
 """
-Groq runner for the cloud side of the benchmark (PRIMARY per SPEC v0.3 §3.1).
+Cloud Provider B runner.
 
-- Models (free tier on console.groq.com):
-  - llama-3.1-8b-instant       (fast/cheap column)
-  - llama-3.3-70b-versatile    (high-quality column; replaces deprecated mixtral-8x7b)
-- Endpoint: https://api.groq.com/openai/v1/chat/completions  (OpenAI-compatible)
+Connects to a hosted chat-completions endpoint at a third-party provider's
+API (chat-completions-compatible shape, identical to Cloud A's contract).
+The provider's identity is intentionally not surfaced in this file's
+public-facing strings — the bench measures behavior, not brands. The API
+URL constant below documents what this runner actually hits so anyone
+running the bench can verify what's being measured.
+
+- Endpoint: see API_URL constant below (factual technical reference)
+- Auth: bearer token in CLOUD_B_API_KEY env var
+- Free tier signup typically available at the provider's website.
 - Modes:
   - "default" — prompt-only.
   - "best"    — response_format: json_schema with strict=true.
 
-Mirrors runners.openai.run_openai_once exactly except for endpoint, auth env
-var, and the `system` label. Groq's API is OpenAI-compatible so the response
-shape (incl. `system_fingerprint` and `usage`) is identical.
+Mirrors runners.cloud_a.run_cloud_a_once exactly except for endpoint, auth
+env var, and the `system` label.
 """
 from __future__ import annotations
 
@@ -34,7 +39,7 @@ API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
 @dataclass(frozen=True)
-class GroqRunResult:
+class CloudBRunResult:
     system: str
     mode: Mode
     parser_mode: ParserMode
@@ -96,7 +101,7 @@ def _payload_best(
     }
 
 
-def _call_groq(
+def _call_cloud(
     payload: Dict[str, Any], api_key: str, timeout: float = 60.0
 ) -> Dict[str, Any]:
     resp = requests.post(
@@ -112,7 +117,7 @@ def _call_groq(
     return resp.json()
 
 
-def run_groq_once(
+def run_cloud_b_once(
     *,
     mode: Mode,
     parser_mode: ParserMode,
@@ -123,12 +128,11 @@ def run_groq_once(
     scenario_id: str,
     schema_id: str,
     seed: int = 0,
-) -> GroqRunResult:
-    api_key = os.environ.get("GROQ_API_KEY")
+) -> CloudBRunResult:
+    api_key = os.environ.get("CLOUD_B_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "GROQ_API_KEY not set. Export it before running the Groq runner. "
-            "Free tier: console.groq.com (no credit card required)."
+            "CLOUD_B_API_KEY not set. Export it before running the Cloud Provider B runner."
         )
 
     if mode == "default":
@@ -141,15 +145,15 @@ def run_groq_once(
         raise ValueError(f"Unknown mode: {mode}")
 
     t0 = time.perf_counter()
-    data = _call_groq(payload, api_key)
+    data = _call_cloud(payload, api_key)
     latency = time.perf_counter() - t0
 
     choices = data.get("choices") or []
     if not choices:
-        raise RuntimeError(f"Groq response had no choices: {data!r}")
+        raise RuntimeError(f"Cloud B response had no choices: {data!r}")
     raw = choices[0].get("message", {}).get("content")
     if not isinstance(raw, str):
-        raise RuntimeError(f"Unexpected Groq response shape: {data!r}")
+        raise RuntimeError(f"Unexpected Cloud B response shape: {data!r}")
 
     system_fingerprint = data.get("system_fingerprint")
     usage = data.get("usage") or {}
@@ -170,8 +174,8 @@ def run_groq_once(
         schema_result = None
         schema_ok = False
 
-    return GroqRunResult(
-        system=f"groq-{model}",
+    return CloudBRunResult(
+        system=f"cloud-b-{model}",
         mode=mode,
         parser_mode=parser_mode,
         model=model,

@@ -44,10 +44,10 @@ COST_PER_CALL: Dict[str, float] = {
     # local amortized (Mac mini $1,400 / 8.76M calls)
     "qwen2.5:3b-instruct": 0.00016,
     "qwen2.5:7b-instruct": 0.00016,
-    # Groq paid pricing (free tier = $0; we report paid as the projection)
+    # Cloud Provider B paid pricing (free tier = $0; we report paid as the projection)
     "llama-3.1-8b-instant": 0.000018,
     "llama-3.3-70b-versatile": 0.000197,
-    # OpenAI
+    # Cloud Provider A (flagship)
     "gpt-4o-2024-08-06": 0.0015,
 }
 
